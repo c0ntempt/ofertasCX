@@ -20,4 +20,3 @@ def process_table(selector: str, page: str) -> iter:
             pago=[i.strip() for i in data[6].text.strip().split('\n') if not i.isspace()],
             timestamp=timestamp
         )
-
