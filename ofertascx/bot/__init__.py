@@ -20,15 +20,6 @@ class Bot:
         # Make sure to set use_context=True to use the new context based callbacks
         # Post version 12 this will no longer be necessary
         self.updater = Updater(token, use_context=True)
-        dispatcher = self.updater.dispatcher
-
-        # Already binded commands
-        dispatcher.add_handler(CommandHandler('start', self.command_start))
-        dispatcher.add_handler(CommandHandler('help', self.command_help))
-        dispatcher.add_error_handler(self.error_handler)
-
-        # Call bind for descendant classes
-        self.bind_commands()
 
     def bind_commands(self):
         raise Exception('Not Implemented')
