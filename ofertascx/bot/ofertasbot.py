@@ -52,9 +52,9 @@ class Messages:
 def gen_oferta_msg(tipo='venta'):
     get_ofertas = get_ventas if tipo == 'venta' else get_compras
 
-    msg = ''
+    msg = '<b>Ofertas de %s</b>\n' % tipo
     for oferta in get_ofertas():
-        msg = msg + '{cripto} {valor}% - {usuario}\n'.format(
+        msg = msg + '{cripto} ({valor}%) - <pre>{usuario}</pre>\n'.format(
             cripto=oferta.get('cripto'),
             valor=oferta.get('valor'),
             usuario=oferta.get('usuario'),
