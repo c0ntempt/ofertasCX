@@ -15,44 +15,51 @@ logger = logging.getLogger(__name__)
 
 class States(Enum):
     START = auto()
-    HELP = auto()
+    # HELP = auto()
+    VENTAS = auto()
+    COMPRAS = auto()
+
+
+# Callback data
+class Stage(Enum):
+    INICIO = auto()
     VENTAS = auto()
     COMPRAS = auto()
 
 
 keyboard_start = [[
-    InlineKeyboardButton('Ventas', callback_data=str(States.VENTAS)),
-    InlineKeyboardButton('Compras', callback_data=str(States.COMPRAS)),
-    InlineKeyboardButton('Ayuda', callback_data=str(States.HELP)),
+    InlineKeyboardButton('Ventas', callback_data=str(Stage.VENTAS)),
+    InlineKeyboardButton('Compras', callback_data=str(Stage.COMPRAS)),
+    # InlineKeyboardButton('Ayuda', callback_data=str(States.HELP)),
+]]
+
+keyboard_oferta_venta = [[
+    InlineKeyboardButton('Filtrar', callback_data=str(Stage.VENTAS)),
+    InlineKeyboardButton('Volver', callback_data=str(Stage.COMPRAS)),
+    # InlineKeyboardButton('Alerta', callback_data=str(States.HELP)),
+]]
+
+keyboard_filtros = [[
+    InlineKeyboardButton('Moneda', callback_data=str(Stage.VENTAS)),
+    InlineKeyboardButton('Valor', callback_data=str(Stage.COMPRAS)),
+    InlineKeyboardButton('Pago', callback_data=str(Stage.COMPRAS)),
 ]]
 
 
 class Messages:
     WELCOME = (
         '<b>Bienvenido a OfertasCX bot.</b>\n'
-        'Este bot no esta relacionado de forma alguno con el proyecto o desarrolladores '
-        'de la plataforma <a href="https://bit.ly/2ZtAyrq">CubaXchange</a>. '
+        'Este bot no esta relacionado de forma alguna con el proyecto o desarrolladores '
+        'de <a href="https://bit.ly/2ZtAyrq">CubaXchange</a>. '
         'Aqui podras encontrar de manera facil y actualizada las distintas ofertas que son publicadas'
         'en la plataforma, actualizada cada 10 minutos. Espero que les sirva de ayuda.'
-    )
-
-    VENTAS = (
-        ''
-    )
-
-    COMPRAS = (
-        ''
-    )
-
-    AYUDA = (
-        ''
     )
 
 
 def gen_oferta_msg(tipo='venta'):
     get_ofertas = get_ventas if tipo == 'venta' else get_compras
 
-    msg = '<b>Ofertas de %s</b>\n' % tipo
+    msg = '<b>Ofertas de %s</b>\n\n' % tipo
     for oferta in get_ofertas():
         msg = msg + '{cripto} ({valor}%) - <pre>{usuario}</pre>\n'.format(
             cripto=oferta.get('cripto'),
@@ -74,9 +81,9 @@ class OfertasBot(Bot):
             entry_points=[CommandHandler('start', self.command_start)],
             states={
                 str(States.START): [
-                    CallbackQueryHandler(self.command_ventas, pattern='^' + str(States.VENTAS) + '$'),
-                    CallbackQueryHandler(self.command_compras, pattern='^' + str(States.COMPRAS) + '$'),
-                    CallbackQueryHandler(self.command_help, pattern='^' + str(States.HELP) + '$'),
+                    CallbackQueryHandler(self.command_ventas, pattern='^' + str(Stage.VENTAS) + '$'),
+                    CallbackQueryHandler(self.command_compras, pattern='^' + str(Stage.COMPRAS) + '$'),
+                    # CallbackQueryHandler(self.command_help, pattern='^' + str(Stage.HELP) + '$'),
                 ]
             },
             fallbacks=[CommandHandler('start', self.command_start)]
@@ -96,15 +103,15 @@ class OfertasBot(Bot):
         )
         return str(States.START)
 
-    def command_help(self, update: Update, context: CallbackContext):
-        query = update.callback_query
-        query.answer()
-
-        query.edit_message_text(
-            text='Help Text',
-            reply_markup=InlineKeyboardMarkup(keyboard_start)
-        )
-        return str(States.START)
+    # def command_help(self, update: Update, context: CallbackContext):
+    #     query = update.callback_query
+    #     query.answer()
+    #
+    #     query.edit_message_text(
+    #         text='Help Text',
+    #         reply_markup=InlineKeyboardMarkup(keyboard_start)
+    #     )
+    #     return str(Stage.START)
 
     # TODO Check msg length
     def command_ventas(self, update: Update, context: CallbackContext):
