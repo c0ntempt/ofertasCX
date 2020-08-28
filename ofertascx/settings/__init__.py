@@ -4,6 +4,8 @@ TESTING = os.environ.get('OCX_TESTING', False)
 
 URL_OFFERS = 'https://cubaxchange.com/offers'
 
+MY_REFERRAL = 'https://bit.ly/2ZtAyrq'
+
 USER_AGENT = {
     'user-agent': 'ofertascx/bot contact:@n3s7or'
 }

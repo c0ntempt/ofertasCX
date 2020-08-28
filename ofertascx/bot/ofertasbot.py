@@ -6,6 +6,7 @@ from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHand
 
 from ofertascx.bot import Bot
 from ofertascx import get_ventas, get_compras
+from ofertascx.settings import MY_REFERRAL
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -50,7 +51,7 @@ class Messages:
     WELCOME = (
         '<b>Bienvenido a OfertasCX bot.</b>\n'
         'Este bot no esta relacionado de forma alguna con el proyecto o desarrolladores '
-        'de <a href="https://bit.ly/2ZtAyrq">CubaXchange</a>. '
+        'de <a href="' + MY_REFERRAL + '">CubaXchange</a>. '
         'Aqui podras encontrar de manera facil y actualizada las distintas ofertas que son publicadas'
         'en la plataforma, actualizada cada 10 minutos. Espero que les sirva de ayuda.'
     )
@@ -59,7 +60,7 @@ class Messages:
 def gen_oferta_msg(tipo='venta'):
     get_ofertas = get_ventas if tipo == 'venta' else get_compras
 
-    msg = '<b>Ofertas de %s</b>\n\n' % tipo
+    msg = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'.format(tipo, MY_REFERRAL)
     for oferta in get_ofertas():
         msg = msg + '{cripto} ({valor}%) - <pre>{usuario}</pre>\n'.format(
             cripto=oferta.get('cripto'),
