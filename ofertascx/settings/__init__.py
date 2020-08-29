@@ -1,6 +1,6 @@
 import os
 
-TESTING = os.environ.get('OCX_TESTING', False)
+TESTING = bool(os.environ.get('OCX_TESTING', False))
 
 URL_OFFERS = 'https://cubaxchange.com/offers'
 

@@ -19,45 +19,56 @@ class States(Enum):
     # HELP = auto()
     VENTAS = auto()
     COMPRAS = auto()
+    FILTER = auto()
 
 
 # Callback data
 class Stage(Enum):
-    INICIO = auto()
     VENTAS = auto()
     COMPRAS = auto()
+    FILTER = auto()
+    BACK = auto()
+    FILTER_MONEDA = auto()
+    FILTER_VALOR = auto()
+    FILTER_PAGO = auto()
 
 
 keyboard_start = [[
     InlineKeyboardButton('Ventas', callback_data=str(Stage.VENTAS)),
     InlineKeyboardButton('Compras', callback_data=str(Stage.COMPRAS)),
-    # InlineKeyboardButton('Ayuda', callback_data=str(States.HELP)),
 ]]
 
-keyboard_oferta_venta = [[
-    InlineKeyboardButton('Filtrar', callback_data=str(Stage.VENTAS)),
-    InlineKeyboardButton('Volver', callback_data=str(Stage.COMPRAS)),
-    # InlineKeyboardButton('Alerta', callback_data=str(States.HELP)),
+keyboard_oferta = [[
+    InlineKeyboardButton('Filtrar', callback_data=str(Stage.FILTER)),
+    InlineKeyboardButton('Volver', callback_data=str(Stage.BACK)),
 ]]
 
-keyboard_filtros = [[
-    InlineKeyboardButton('Moneda', callback_data=str(Stage.VENTAS)),
-    InlineKeyboardButton('Valor', callback_data=str(Stage.COMPRAS)),
-    InlineKeyboardButton('Pago', callback_data=str(Stage.COMPRAS)),
-]]
+keyboard_filtros = [
+    [
+        InlineKeyboardButton('Moneda', callback_data=str(Stage.FILTER_MONEDA)),
+        InlineKeyboardButton('Valor', callback_data=str(Stage.FILTER_VALOR)),
+        InlineKeyboardButton('Pago', callback_data=str(Stage.FILTER_PAGO)),
+    ], [
+        InlineKeyboardButton('Volver', callback_data=str(Stage.BACK)),
+    ]
 
+]
+
+
+# TODO  Check for messages' length
+# TODO  Implement pagination
 
 class Messages:
     WELCOME = (
         '<b>Bienvenido a OfertasCX bot.</b>\n'
         'Este bot no esta relacionado de forma alguna con el proyecto o desarrolladores '
         'de <a href="' + MY_REFERRAL + '">CubaXchange</a>. '
-        'Aqui podras encontrar de manera facil y actualizada las distintas ofertas que son publicadas'
-        'en la plataforma, actualizada cada 10 minutos. Espero que les sirva de ayuda.'
+        'Aqui podras encontrar de manera facil y actualizada las distintas ofertas que son publicadas '
+        'en la plataforma.\nDatos actualizados cada 10 minutos. Espero que les sirva de ayuda.'
     )
 
 
-def gen_oferta_msg(tipo='venta'):
+def gen_oferta_msg(tipo='venta'):   # TODO Avoid hardcode this prone to error if tipo dont match 'compra'
     get_ofertas = get_ventas if tipo == 'venta' else get_compras
 
     msg = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'.format(tipo, MY_REFERRAL)
@@ -84,7 +95,20 @@ class OfertasBot(Bot):
                 str(States.START): [
                     CallbackQueryHandler(self.command_ventas, pattern='^' + str(Stage.VENTAS) + '$'),
                     CallbackQueryHandler(self.command_compras, pattern='^' + str(Stage.COMPRAS) + '$'),
-                    # CallbackQueryHandler(self.command_help, pattern='^' + str(Stage.HELP) + '$'),
+                ],
+                str(States.VENTAS): [
+                    CallbackQueryHandler(self.command_filter, pattern='^' + str(Stage.FILTER) + '$'),
+                    CallbackQueryHandler(self.command_start_inline, pattern='^' + str(Stage.BACK) + '$'),
+                ],
+                str(States.COMPRAS): [
+                    CallbackQueryHandler(self.command_filter, pattern='^' + str(Stage.FILTER) + '$'),
+                    CallbackQueryHandler(self.command_start_inline, pattern='^' + str(Stage.BACK) + '$'),
+                ],
+                str(States.FILTER): [
+                    CallbackQueryHandler(self.command_filter, pattern='^' + str(Stage.FILTER_MONEDA) + '$'),
+                    CallbackQueryHandler(self.command_filter, pattern='^' + str(Stage.FILTER_VALOR) + '$'),
+                    CallbackQueryHandler(self.command_filter, pattern='^' + str(Stage.FILTER_PAGO) + '$'),
+                    CallbackQueryHandler(self.command_back, pattern='^' + str(Stage.BACK) + '$'),
                 ]
             },
             fallbacks=[CommandHandler('start', self.command_start)]
@@ -102,39 +126,100 @@ class OfertasBot(Bot):
             Messages.WELCOME,
             reply_markup=InlineKeyboardMarkup(keyboard_start)
         )
+
+        context.user_data['prev_state'] = States.VENTAS
+
         return str(States.START)
 
-    # def command_help(self, update: Update, context: CallbackContext):
-    #     query = update.callback_query
-    #     query.answer()
-    #
-    #     query.edit_message_text(
-    #         text='Help Text',
-    #         reply_markup=InlineKeyboardMarkup(keyboard_start)
-    #     )
-    #     return str(Stage.START)
+    def command_start_inline(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        query.answer()
 
-    # TODO Check msg length
+        query.edit_message_text(
+            text=Messages.WELCOME,
+            reply_markup=InlineKeyboardMarkup(keyboard_start),
+            parse_mode=ParseMode.HTML
+        )
+
+        context.user_data['prev_state'] = States.START
+
+        return str(States.START)
+
     def command_ventas(self, update: Update, context: CallbackContext):
+        logger.info('command_ventas')
         query = update.callback_query
         query.answer()
 
         query.edit_message_text(
             text=gen_oferta_msg(),
-            reply_markup=InlineKeyboardMarkup(keyboard_start),
+            reply_markup=InlineKeyboardMarkup(keyboard_oferta),
             parse_mode=ParseMode.HTML
         )
-        return str(States.START)
 
-    # TODO Check msg length
+        context.user_data['prev_state'] = States.VENTAS
+
+        return str(States.VENTAS)
+
     def command_compras(self, update: Update, context: CallbackContext):
         query = update.callback_query
         query.answer()
 
         query.edit_message_text(
             text=gen_oferta_msg('compra'),
-            reply_markup=InlineKeyboardMarkup(keyboard_start),
+            reply_markup=InlineKeyboardMarkup(keyboard_oferta),
             parse_mode=ParseMode.HTML
         )
 
-        return str(States.START)
+        context.user_data['prev_state'] = States.COMPRAS
+
+        return str(States.COMPRAS)
+
+    def command_filter(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        query.answer()
+
+        if context.user_data.get('prev_state') == States.VENTAS:
+            msg = gen_oferta_msg()
+        elif context.user_data.get('prev_state') == States.COMPRAS:
+            msg = gen_oferta_msg('compra')
+
+        query.edit_message_text(
+            text=msg,
+            reply_markup=InlineKeyboardMarkup(keyboard_filtros),
+            parse_mode=ParseMode.HTML
+        )
+
+        context.user_data['prev_state'] = States.VENTAS
+
+        return str(States.FILTER)
+
+    def command_filter_moneda(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        query.answer()
+
+        query.edit_message_text(
+            text='Seleccione',
+            reply_markup=InlineKeyboardMarkup(keyboard_filtros),
+            parse_mode=ParseMode.HTML
+        )
+
+        context.user_data['prev_state'] = States.VENTAS
+
+        return str(States.VENTAS)
+
+    def command_back(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        query.answer()
+
+        if context.user_data.get('prev_state') == States.VENTAS:
+            msg = gen_oferta_msg()
+        elif context.user_data.get('prev_state') == States.COMPRAS:
+            msg = gen_oferta_msg('compra')
+
+        query.edit_message_text(
+            text=msg,
+            reply_markup=InlineKeyboardMarkup(keyboard_oferta),
+            parse_mode=ParseMode.HTML
+        )
+
+        return str(context.user_data.get('prev_state'))
