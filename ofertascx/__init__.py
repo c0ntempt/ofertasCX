@@ -4,14 +4,27 @@ from ofertascx.parser import process_table
 from ofertascx.cache import Cache
 
 
+# TODO Organize this
+class OfferType(dict):
+    COMPRA = 'compras'
+    VENTA = 'ventas'
+
+    def __init__(self):
+        super().__init__()
+        self[self.COMPRA] = self.COMPRA
+        self[self.VENTA] = self.VENTA
+
+    def __getattr__(self, item):
+        if item in self:
+            return self[item]
+        return None
+
+
+Offers = OfferType()
+
+
 def get_page() -> str or bool:
     """Fetch cubaxchange public offers page"""
-
-    # Perhaps this isn't the best approach
-    if settings.TESTING:
-        with open(__path__[0] + '/tests/offers.html', 'r') as f:
-            return f.read()
-
     r = None
     try:
         r = requests.get(settings.URL_OFFERS, headers=settings.USER_AGENT)
@@ -24,34 +37,34 @@ def get_page() -> str or bool:
     raise 'Something bad happen while fetching the page: %s' % r.reason
 
 
-def get_offers():
+def scrape_offers():
     cache = Cache()
     html = get_page()
 
-    for offer in ('ventas', 'compras'):
+    for offer in Offers:
         cache.store(offer, list(process_table(selector=offer, page=html)))
 
 
-# TODO Avoid code duplication
-def get_ventas():
+def get_offer(type_=Offers.VENTA):
+    if type_ not in Offers:
+        raise Exception('Non existent type')
+
     cache = Cache()
-    ventas = cache.restore('ventas')
 
-    if ventas:
-        return ventas
+    offer = cache.restore(type_)
+    if offer:
+        return offer
     else:
-        get_offers()
+        scrape_offers()
 
-    return cache.restore('ventas')
+    return cache.restore(type_)
+
+
+def get_ventas():
+    """Shortcut for get_offer"""
+    return get_offer(type_=Offers.VENTA)
 
 
 def get_compras():
-    cache = Cache()
-    compras = cache.restore('compras')
-
-    if compras:
-        return compras
-    else:
-        get_offers()
-
-    return cache.restore('compras')
+    """Shortcut for get_offer"""
+    return get_offer(type_=Offers.COMPRA)
