@@ -1,9 +1,9 @@
-FROM python:3.8
-# FROM python:3.8-alpine
+#FROM python:3.8
+FROM python:3.8-alpine
 
-# RUN apk update \
-#  && apk add gcc python3-dev linux-headers libffi-dev \
-#  && rm -rf /var/cache/apk/*
+RUN apk update \
+&& apk add gcc python3-dev linux-headers libffi-dev \
+&& rm -rf /var/cache/apk/*
 
 COPY conf/pip.conf /etc
 
