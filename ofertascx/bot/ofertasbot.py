@@ -28,13 +28,19 @@ class Stage(Enum):
     COMPRAS = auto()
     FILTER = auto()
     BACK = auto()
+
     FILTER_MONEDA = auto()
     FILTER_VALOR = auto()
     FILTER_PAGO = auto()
+
     FILTER_MONEDA_BTC = auto()
     FILTER_MONEDA_LTC = auto()
     FILTER_MONEDA_ETH = auto()
     FILTER_MONEDA_USD = auto()
+
+    FILTER_VALOR_UP_TO_5 = auto()           # VALOR <= 5
+    FILTER_VALOR_BETWEEN_5_AND_15 = auto()  # 5 < VALOR <= 15
+    FILTER_VALOR_BEYOND_15 = auto()         # VALOR > 15
 
 
 keyboard_start = [[
@@ -50,7 +56,7 @@ keyboard_oferta = [[
 keyboard_filtros = [
     [
         InlineKeyboardButton('Moneda', callback_data=str(Stage.FILTER_MONEDA)),
-        # InlineKeyboardButton('Valor', callback_data=str(Stage.FILTER_VALOR)),
+        InlineKeyboardButton('Valor', callback_data=str(Stage.FILTER_VALOR)),
         # InlineKeyboardButton('Pago', callback_data=str(Stage.FILTER_PAGO)),
     ], [
         InlineKeyboardButton('Volver', callback_data=str(Stage.BACK)),
@@ -118,12 +124,15 @@ class OfertasBot(Bot):
                 ],
                 str(States.FILTER): [
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA) + '$'),
-                    # CallbackQueryHandler(self.command_filter_valor, pattern='^' + str(Stage.FILTER_VALOR) + '$'),
+                    CallbackQueryHandler(self.command_filter_valor, pattern='^' + str(Stage.FILTER_VALOR) + '$'),
                     # CallbackQueryHandler(self.command_filter_pago, pattern='^' + str(Stage.FILTER_PAGO) + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA_BTC) + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA_LTC) + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA_ETH) + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA_USD) + '$'),
+                    CallbackQueryHandler(self.command_filter_valor, pattern='^' + str(Stage.FILTER_VALOR_UP_TO_5) + '$'),
+                    CallbackQueryHandler(self.command_filter_valor, pattern='^' + str(Stage.FILTER_VALOR_BETWEEN_5_AND_15) + '$'),
+                    CallbackQueryHandler(self.command_filter_valor, pattern='^' + str(Stage.FILTER_VALOR_BEYOND_15) + '$'),
                     CallbackQueryHandler(self.command_back, pattern='^' + str(Stage.BACK) + '$'),
                 ]
             },
@@ -289,6 +298,78 @@ class OfertasBot(Bot):
             query.edit_message_text(
                 text='Seleccione moneda',
                 reply_markup=InlineKeyboardMarkup(keyboard_filtro_moneda),
+                parse_mode=ParseMode.HTML
+            )
+
+        return str(States.FILTER)
+
+    def command_filter_valor(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        query.answer()
+
+        prev_state = context.user_data.get('prev_state')
+        if not prev_state:
+            raise Exception('Invalid prev state. Imposible to be here')
+
+        filter_offer = None
+        if prev_state == States.VENTAS:
+            filter_offer = filter_ventas
+        elif prev_state == States.COMPRAS:
+            filter_offer = filter_compras
+        else:
+            raise Exception('Invalid state. That\'s imposible')
+
+        # TODO Wired currencies
+        keyboard_filtro_valor = [
+            [
+                InlineKeyboardButton('< 5', callback_data=str(Stage.FILTER_VALOR_UP_TO_5)),
+                InlineKeyboardButton('Entre 5 y 15', callback_data=str(Stage.FILTER_VALOR_BETWEEN_5_AND_15)),
+                InlineKeyboardButton('> 15', callback_data=str(Stage.FILTER_VALOR_BEYOND_15)),
+            ], [
+                InlineKeyboardButton('Volver', callback_data=str(Stage.BACK)),
+            ]
+        ]
+
+        if query.data == str(Stage.FILTER_VALOR_UP_TO_5):
+            offers = filter_offer(valor=dict(max=5))
+            if len(offers) == 0:
+                msg = 'No existe una oferta con esas caracteristicas'
+            else:
+                msg = construct_oferta_msg(offers)
+
+            query.edit_message_text(
+                text=msg,
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_valor),
+                parse_mode=ParseMode.HTML
+            )
+        elif query.data == str(Stage.FILTER_VALOR_BETWEEN_5_AND_15):
+            offers = filter_offer(valor=dict(min=5, max=15))
+            if len(offers) == 0:
+                msg = 'No existe una oferta con esas caracteristicas'
+            else:
+                msg = construct_oferta_msg(offers)
+
+            query.edit_message_text(
+                text=msg,
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_valor),
+                parse_mode=ParseMode.HTML
+            )
+        elif query.data == str(Stage.FILTER_VALOR_BEYOND_15):
+            offers = filter_offer(valor=dict(min=15))
+            if len(offers) == 0:
+                msg = 'No existe una oferta con esas caracteristicas'
+            else:
+                msg = construct_oferta_msg(offers)
+
+            query.edit_message_text(
+                text=msg,
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_valor),
+                parse_mode=ParseMode.HTML
+            )
+        else:
+            query.edit_message_text(
+                text='Seleccione intervalo',
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_valor),
                 parse_mode=ParseMode.HTML
             )
 

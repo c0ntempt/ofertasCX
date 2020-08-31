@@ -1,3 +1,4 @@
+import sys
 import requests
 from ofertascx import settings
 from ofertascx.parser import process_table
@@ -82,12 +83,27 @@ def filter_offers(offers, **kwargs):
             kwargs.pop(_filter)
 
     _offers = []
+
     for offer in offers:
         match = True
         for _filter, value in kwargs.items():
-            if value not in offer[_filter]:
-                match = False
-                break
+            # Ugly as hell
+            if isinstance(value, (str, list)):
+                if value not in offer[_filter]:
+                    match = False
+                    break
+            elif isinstance(value, dict) and _filter == FILTER_TYPE[1]:
+                _max = kwargs[_filter].get('max', sys.maxsize)
+                _min = kwargs[_filter].get('min', -sys.maxsize)
+
+                print('Filter %s value %s' % (_filter, value))
+                print(_max, _min)
+                print(offer)
+
+                if not (_min < offer[_filter] <= _max):
+                    match = False
+                    break
+
         if match:
             _offers.append(offer)
 

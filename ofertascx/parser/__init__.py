@@ -15,8 +15,8 @@ def process_table(selector: str, page: str) -> iter:
             avatar=data[1].a.img.get('src'),
             kyc=True if 'fa-check-circle' in data[2].span.get('class') else False,
             cripto=data[3].text.strip(),
-            intervalo=data[4].text.strip().split('\n')[0],
-            valor=data[5].text.strip().split('\n')[0].replace('%', ''),
+            intervalo=[float(i.replace(',', '.')) for i in data[4].text.strip().split('\n')[0].split('-')],
+            valor=int(data[5].text.strip().split('\n')[0].replace('%', '')),
             pago=[i.strip() for i in data[6].text.strip().split('\n') if not i.isspace()],
             timestamp=timestamp
         )
