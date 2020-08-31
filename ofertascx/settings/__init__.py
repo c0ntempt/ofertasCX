@@ -7,7 +7,7 @@ URL_OFFERS = 'https://cubaxchange.com/offers'
 MY_REFERRAL = 'https://bit.ly/2ZtAyrq'
 
 USER_AGENT = {
-    'user-agent': 'ofertascx/bot contact:@n3s7or'
+    'user-agent': 'ofertascx/bot contact: https://t.me/n3s7or'
 }
 
 CACHE_CONN = ('localhost', 11211) if TESTING else (os.environ.get('CACHE_HOST'), int(os.environ.get('CACHE_PORT')))
