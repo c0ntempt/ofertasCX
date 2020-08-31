@@ -6,7 +6,7 @@ from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHand
 
 from ofertascx.bot import Bot
 from ofertascx import get_ventas, get_compras, Offers, filter_ventas, filter_compras
-from ofertascx.settings import MY_REFERRAL
+from ofertascx.settings import MY_REFERRAL, URL_PUBLIC
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -130,6 +130,8 @@ class OfertasBot(Bot):
             fallbacks=[CommandHandler('start', self.command_start)]
         )
         dispatcher.add_handler(conv_handler)
+
+        dispatcher.add_handler(CommandHandler('link', self.command_user_link))
 
     def command_start(self, update: Update, context: CallbackContext):
         """Send message on `/start`."""
@@ -310,3 +312,17 @@ class OfertasBot(Bot):
         )
 
         return str(context.user_data.get('prev_state'))
+
+    def command_user_link(self, update: Update, context: CallbackContext):
+        print(update.message.text)
+        users = update.message.text.split(' ')
+        print(users)
+        print(len(users))
+        if len(users) <= 1:
+            update.message.reply_text('Introduzca al menos un usuario')
+        else:
+            msg = ''
+            for i in range(1, len(users)):
+                msg = msg + '{0}/{1}\n'.format(URL_PUBLIC, users[i])
+
+            update.message.reply_text(msg)

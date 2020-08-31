@@ -2,7 +2,11 @@ import os
 
 TESTING = bool(os.environ.get('OCX_TESTING', False))
 
-URL_OFFERS = 'https://cubaxchange.com/offers'
+URL_BASE = 'https://cubaxchange.com'
+
+URL_PUBLIC = URL_BASE + '/public'
+
+URL_OFFERS = URL_BASE + '/offers'
 
 MY_REFERRAL = 'https://bit.ly/2ZtAyrq'
 
