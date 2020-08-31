@@ -4,6 +4,9 @@ from ofertascx.parser import process_table
 from ofertascx.cache import Cache
 
 
+FILTER_TYPE = ('cripto', 'valor', 'pago')
+
+
 # TODO Organize this
 class OfferType(dict):
     COMPRA = 'compras'
@@ -68,3 +71,31 @@ def get_ventas():
 def get_compras():
     """Shortcut for get_offer"""
     return get_offer(type_=Offers.COMPRA)
+
+
+def filter_offers(offers, **kwargs):
+    for _filter in kwargs:
+        if _filter not in FILTER_TYPE:
+            kwargs.pop(_filter)
+
+    _offers = []
+    for offer in offers:
+        match = True
+        for _filter, value in kwargs.items():
+            if value not in offer[_filter]:
+                match = False
+                break
+        if match:
+            _offers.append(offer)
+
+    return _offers
+
+
+def filter_ventas(**kwargs):
+    """Shortcut for filter_offers"""
+    return filter_offers(get_ventas(), **kwargs)
+
+
+def filter_compras(**kwargs):
+    """Shortcut for filter_compras"""
+    return filter_offers(get_compras(), **kwargs)

@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ParseMo
 from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler
 
 from ofertascx.bot import Bot
-from ofertascx import get_ventas, get_compras
+from ofertascx import get_ventas, get_compras, Offers, filter_ventas, filter_compras
 from ofertascx.settings import MY_REFERRAL
 
 # Enable logging
@@ -31,6 +31,10 @@ class Stage(Enum):
     FILTER_MONEDA = auto()
     FILTER_VALOR = auto()
     FILTER_PAGO = auto()
+    FILTER_MONEDA_BTC = auto()
+    FILTER_MONEDA_LTC = auto()
+    FILTER_MONEDA_ETH = auto()
+    FILTER_MONEDA_USD = auto()
 
 
 keyboard_start = [[
@@ -46,17 +50,13 @@ keyboard_oferta = [[
 keyboard_filtros = [
     [
         InlineKeyboardButton('Moneda', callback_data=str(Stage.FILTER_MONEDA)),
-        InlineKeyboardButton('Valor', callback_data=str(Stage.FILTER_VALOR)),
-        InlineKeyboardButton('Pago', callback_data=str(Stage.FILTER_PAGO)),
+        # InlineKeyboardButton('Valor', callback_data=str(Stage.FILTER_VALOR)),
+        # InlineKeyboardButton('Pago', callback_data=str(Stage.FILTER_PAGO)),
     ], [
         InlineKeyboardButton('Volver', callback_data=str(Stage.BACK)),
     ]
-
 ]
 
-
-# TODO  Check for messages' length
-# TODO  Implement pagination
 
 class Messages:
     WELCOME = (
@@ -68,11 +68,22 @@ class Messages:
     )
 
 
-def gen_oferta_msg(tipo='venta'):   # TODO Avoid hardcode this prone to error if tipo dont match 'compra'
-    get_ofertas = get_ventas if tipo == 'venta' else get_compras
+def gen_oferta_msg(type_=Offers.VENTA):
+    if type_ not in Offers:
+        raise Exception('Invalid offer type')
+    get_ofertas = get_ventas if type_ == Offers.VENTA else get_compras
 
-    msg = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'.format(tipo, MY_REFERRAL)
-    for oferta in get_ofertas():
+    msg = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'.format(type_, MY_REFERRAL)
+    msg = msg + construct_oferta_msg(get_ofertas())
+    return msg
+
+
+def construct_oferta_msg(ofertas):
+    # TODO  Check for messages' length
+    # TODO  Implement pagination
+
+    msg = ''
+    for oferta in ofertas:
         msg = msg + '{cripto} ({valor}%) - <pre>{usuario}</pre>\n'.format(
             cripto=oferta.get('cripto'),
             valor=oferta.get('valor'),
@@ -89,6 +100,7 @@ class OfertasBot(Bot):
         dispatcher = self.updater.dispatcher
         dispatcher.add_error_handler(self.error_handler)
 
+        # TODO Improve all this
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('start', self.command_start)],
             states={
@@ -105,9 +117,13 @@ class OfertasBot(Bot):
                     CallbackQueryHandler(self.command_start_inline, pattern='^' + str(Stage.BACK) + '$'),
                 ],
                 str(States.FILTER): [
-                    CallbackQueryHandler(self.command_filter, pattern='^' + str(Stage.FILTER_MONEDA) + '$'),
-                    CallbackQueryHandler(self.command_filter, pattern='^' + str(Stage.FILTER_VALOR) + '$'),
-                    CallbackQueryHandler(self.command_filter, pattern='^' + str(Stage.FILTER_PAGO) + '$'),
+                    CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA) + '$'),
+                    # CallbackQueryHandler(self.command_filter_valor, pattern='^' + str(Stage.FILTER_VALOR) + '$'),
+                    # CallbackQueryHandler(self.command_filter_pago, pattern='^' + str(Stage.FILTER_PAGO) + '$'),
+                    CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA_BTC) + '$'),
+                    CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA_LTC) + '$'),
+                    CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA_ETH) + '$'),
+                    CallbackQueryHandler(self.command_filter_moneda, pattern='^' + str(Stage.FILTER_MONEDA_USD) + '$'),
                     CallbackQueryHandler(self.command_back, pattern='^' + str(Stage.BACK) + '$'),
                 ]
             },
@@ -127,7 +143,7 @@ class OfertasBot(Bot):
             reply_markup=InlineKeyboardMarkup(keyboard_start)
         )
 
-        context.user_data['prev_state'] = States.VENTAS
+        context.user_data['prev_state'] = None
 
         return str(States.START)
 
@@ -146,7 +162,6 @@ class OfertasBot(Bot):
         return str(States.START)
 
     def command_ventas(self, update: Update, context: CallbackContext):
-        logger.info('command_ventas')
         query = update.callback_query
         query.answer()
 
@@ -165,7 +180,7 @@ class OfertasBot(Bot):
         query.answer()
 
         query.edit_message_text(
-            text=gen_oferta_msg('compra'),
+            text=gen_oferta_msg(Offers.COMPRA),
             reply_markup=InlineKeyboardMarkup(keyboard_oferta),
             parse_mode=ParseMode.HTML
         )
@@ -178,10 +193,11 @@ class OfertasBot(Bot):
         query = update.callback_query
         query.answer()
 
+        msg = ''
         if context.user_data.get('prev_state') == States.VENTAS:
-            msg = gen_oferta_msg()
+            msg = gen_oferta_msg(Offers.VENTA)
         elif context.user_data.get('prev_state') == States.COMPRAS:
-            msg = gen_oferta_msg('compra')
+            msg = gen_oferta_msg(Offers.COMPRA)
 
         query.edit_message_text(
             text=msg,
@@ -189,32 +205,103 @@ class OfertasBot(Bot):
             parse_mode=ParseMode.HTML
         )
 
-        context.user_data['prev_state'] = States.VENTAS
-
         return str(States.FILTER)
 
     def command_filter_moneda(self, update: Update, context: CallbackContext):
         query = update.callback_query
         query.answer()
 
-        query.edit_message_text(
-            text='Seleccione',
-            reply_markup=InlineKeyboardMarkup(keyboard_filtros),
-            parse_mode=ParseMode.HTML
-        )
+        prev_state = context.user_data.get('prev_state')
+        if not prev_state:
+            raise Exception('Invalid prev state. Imposible to be here')
 
-        context.user_data['prev_state'] = States.VENTAS
+        filter_offer = None
+        if prev_state == States.VENTAS:
+            filter_offer = filter_ventas
+        elif prev_state == States.COMPRAS:
+            filter_offer = filter_compras
+        else:
+            raise Exception('Invalid state. That\'s imposible')
 
-        return str(States.VENTAS)
+        # TODO Wired currencies
+        keyboard_filtro_moneda = [
+            [
+                InlineKeyboardButton('BTC', callback_data=str(Stage.FILTER_MONEDA_BTC)),
+                InlineKeyboardButton('LTC', callback_data=str(Stage.FILTER_MONEDA_LTC)),
+                InlineKeyboardButton('ETH', callback_data=str(Stage.FILTER_MONEDA_ETH)),
+                InlineKeyboardButton('USD', callback_data=str(Stage.FILTER_MONEDA_USD)),
+            ], [
+                InlineKeyboardButton('Volver', callback_data=str(Stage.BACK)),
+            ]
+        ]
+
+        if query.data == str(Stage.FILTER_MONEDA_BTC):
+            offers = filter_offer(cripto='BTC')
+            if len(offers) == 0:
+                msg = 'No existe una oferta con esas caracteristicas'
+            else:
+                msg = construct_oferta_msg(offers)
+
+            query.edit_message_text(
+                text=msg,
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_moneda),
+                parse_mode=ParseMode.HTML
+            )
+        elif query.data == str(Stage.FILTER_MONEDA_LTC):
+            offers = filter_offer(cripto='LTC')
+            if len(offers) == 0:
+                msg = 'No existe una oferta con esas caracteristicas'
+            else:
+                msg = construct_oferta_msg(offers)
+
+            query.edit_message_text(
+                text=msg,
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_moneda),
+                parse_mode=ParseMode.HTML
+            )
+        elif query.data == str(Stage.FILTER_MONEDA_ETH):
+            offers = filter_offer(cripto='ETH')
+            if len(offers) == 0:
+                msg = 'No existe una oferta con esas caracteristicas'
+            else:
+                msg = construct_oferta_msg(offers)
+
+            query.edit_message_text(
+                text=msg,
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_moneda),
+                parse_mode=ParseMode.HTML
+            )
+        elif query.data == str(Stage.FILTER_MONEDA_USD):
+            offers = filter_offer(cripto='USD')
+            if len(offers) == 0:
+                msg = 'No existe una oferta con esas caracteristicas'
+            else:
+                msg = construct_oferta_msg(offers)
+
+            query.edit_message_text(
+                text=msg,
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_moneda),
+                parse_mode=ParseMode.HTML
+            )
+        else:
+            query.edit_message_text(
+                text='Seleccione moneda',
+                reply_markup=InlineKeyboardMarkup(keyboard_filtro_moneda),
+                parse_mode=ParseMode.HTML
+            )
+
+        return str(States.FILTER)
 
     def command_back(self, update: Update, context: CallbackContext):
         query = update.callback_query
         query.answer()
 
+        # TODO Avoid code duplication
+        msg = ''
         if context.user_data.get('prev_state') == States.VENTAS:
-            msg = gen_oferta_msg()
+            msg = gen_oferta_msg(Offers.VENTA)
         elif context.user_data.get('prev_state') == States.COMPRAS:
-            msg = gen_oferta_msg('compra')
+            msg = gen_oferta_msg(Offers.COMPRA)
 
         query.edit_message_text(
             text=msg,
