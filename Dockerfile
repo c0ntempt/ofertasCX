@@ -5,7 +5,7 @@ RUN apk update \
 && apk add gcc python3-dev linux-headers libffi-dev \
 && rm -rf /var/cache/apk/*
 
-COPY conf/pip.conf /etc
+# COPY conf/pip.conf /etc
 
 RUN pip install --upgrade pip
 
