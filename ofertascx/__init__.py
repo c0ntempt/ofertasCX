@@ -44,6 +44,9 @@ def scrape_offers():
     cache = Cache()
     html = get_page()
 
+    if not html:
+        raise Exception('Could not fetch offers page')
+
     for offer in Offers:
         cache.store(offer, list(process_table(selector=offer, page=html)))
 
