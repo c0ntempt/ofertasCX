@@ -96,10 +96,6 @@ def filter_offers(offers, **kwargs):
                 _max = kwargs[_filter].get('max', sys.maxsize)
                 _min = kwargs[_filter].get('min', -sys.maxsize)
 
-                print('Filter %s value %s' % (_filter, value))
-                print(_max, _min)
-                print(offer)
-
                 if not (_min < offer[_filter] <= _max):
                     match = False
                     break

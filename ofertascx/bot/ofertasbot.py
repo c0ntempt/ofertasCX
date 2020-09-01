@@ -90,7 +90,7 @@ def construct_oferta_msg(ofertas):
 
     msg = ''
     for oferta in ofertas:
-        msg = msg + '{cripto} ({valor}%) - <pre>{usuario}</pre>\n'.format(
+        msg = msg + '{cripto} ({valor}%) - <code>{usuario}</code>\n'.format(
             cripto=oferta.get('cripto'),
             valor=oferta.get('valor'),
             usuario=oferta.get('usuario'),
@@ -395,10 +395,7 @@ class OfertasBot(Bot):
         return str(context.user_data.get('prev_state'))
 
     def command_user_link(self, update: Update, context: CallbackContext):
-        print(update.message.text)
         users = update.message.text.split(' ')
-        print(users)
-        print(len(users))
         if len(users) <= 1:
             update.message.reply_text('Introduzca al menos un usuario')
         else:
