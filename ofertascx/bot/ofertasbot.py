@@ -94,7 +94,6 @@ def construct_oferta_msg(ofertas):
             cripto=oferta.get('cripto'),
             valor=oferta.get('valor'),
             usuario=oferta.get('usuario'),
-            link=oferta.get('link')
         )
     return msg
 
