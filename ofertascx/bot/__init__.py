@@ -3,10 +3,9 @@ import json
 import logging
 import traceback
 
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Updater, CallbackContext
 from telegram import ParseMode, Update
 
-# Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)

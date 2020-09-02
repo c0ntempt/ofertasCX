@@ -1,8 +1,14 @@
+import logging
 import sys
+import time
 import requests
 from ofertascx import settings
 from ofertascx.parser import process_table
 from ofertascx.cache import Cache
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 FILTER_TYPE = ('cripto', 'valor', 'pago')
@@ -27,18 +33,28 @@ class OfferType(dict):
 Offers = OfferType()
 
 
+def delay_check(start, info, threshold=1.5):
+    stop = time.time()
+    delay = stop - start
+    if delay > threshold:
+        logger.warning('Slow function detected: %s seconds in %s', delay, info)
+
+
 def get_page() -> str or bool:
     """Fetch cubaxchange public offers page"""
     r = None
+    start = time.time()
     try:
         r = requests.get(settings.URL_OFFERS, headers=settings.USER_AGENT)
     except Exception as e:
-        print(e)
+        logger.error(e)
         return False
+    finally:
+        delay_check(start, get_page.__name__)
 
     if r and r.status_code == requests.codes.ok:
         return r.text
-    raise 'Something bad happen while fetching the page: %s' % r.reason
+    raise Exception('Something bad happen while fetching the page: %s' % r.reason)
 
 
 def scrape_offers():
