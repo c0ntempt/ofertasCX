@@ -122,11 +122,36 @@ def filter_offers(offers, **kwargs):
     return _offers
 
 
+def gen_key(**kwargs):
+    # Kinda ugly o_0
+    return '-'.join([('%s(%s)' % (i[0], i[1])).replace(' ', '') for i in sorted(kwargs.items())])
+
+
 def filter_ventas(**kwargs):
-    """Shortcut for filter_offers"""
-    return filter_offers(get_ventas(), **kwargs)
+    """Shortcut for filter_offers with cache"""
+
+    cache = Cache()
+    key = 'ventas/%s/' % gen_key(**kwargs)
+
+    offers = cache.restore(key)
+    if offers:
+        return offers
+
+    offers = filter_offers(get_ventas(), **kwargs)
+    cache.store(key, offers)
+    return offers
 
 
 def filter_compras(**kwargs):
-    """Shortcut for filter_compras"""
-    return filter_offers(get_compras(), **kwargs)
+    """Shortcut for filter_compras with cache"""
+
+    cache = Cache()
+    key = 'compras/%s/' % gen_key(**kwargs)
+
+    offers = cache.restore(key)
+    if offers:
+        return offers
+
+    offers = filter_offers(get_compras(), **kwargs)
+    cache.store(key, offers)
+    return offers
