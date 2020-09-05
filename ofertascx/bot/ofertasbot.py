@@ -2,9 +2,9 @@ import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler
 
-from ofertascx.bot import Bot
 from ofertascx import get_ventas, get_compras, Offers, filter_ventas, filter_compras
-from ofertascx.settings import MY_REFERRAL, URL_PUBLIC
+from ofertascx.bot import Bot
+from ofertascx.settings import MY_REFERRAL, URL_PUBLIC, PagoIntervals
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -48,11 +48,12 @@ keyboard_filtros = [
 class Messages:
     WELCOME = (
         '<b>Bienvenido a OfertasCX bot.</b>\n'
-        'Este bot no esta relacionado de forma alguna con el proyecto o desarrolladores '
-        'de <a href="' + MY_REFERRAL + '">CubaXchange</a>. '
         'Aqui podras encontrar de manera facil y actualizada las distintas ofertas que son publicadas '
         'en la plataforma.\nDatos actualizados cada 10 minutos. Espero que les sirva de ayuda.'
+        '\nEste bot no esta relacionado de forma alguna con el proyecto o desarrolladores '
+        'de <a href="' + MY_REFERRAL + '">CubaXchange</a>. '
     )
+    OFERTA = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'
 
 
 def gen_oferta_msg(type_=Offers.VENTA):
@@ -60,7 +61,7 @@ def gen_oferta_msg(type_=Offers.VENTA):
         raise Exception('Invalid offer type')
     get_ofertas = get_ventas if type_ == Offers.VENTA else get_compras
 
-    msg = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'.format(type_, MY_REFERRAL)
+    msg = Messages.OFERTA.format(type_, MY_REFERRAL)
     msg = msg + construct_oferta_msg(get_ofertas())
     return msg
 
@@ -86,7 +87,6 @@ class OfertasBot(Bot):
         dispatcher = self.updater.dispatcher
         dispatcher.add_error_handler(self.error_handler)
 
-        # TODO Improve all this
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('start', self.command_start)],
             states={
@@ -105,14 +105,16 @@ class OfertasBot(Bot):
                 FILTER: [
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA + '$'),
                     CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR + '$'),
-                    # CallbackQueryHandler(self.command_filter_pago, pattern='^' + FILTER_PAGO + '$'),
+
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA_BTC + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA_LTC + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA_ETH + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA_USD + '$'),
+
                     CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR_UP_TO_5 + '$'),
                     CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR_BETWEEN_5_AND_15 + '$'),
                     CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR_BEYOND_15 + '$'),
+
                     CallbackQueryHandler(self.command_back, pattern='^' + BACK + '$'),
                 ]
             },
@@ -291,15 +293,15 @@ class OfertasBot(Bot):
         if not prev_state:
             raise Exception('Invalid prev state. Imposible to be here')
 
-        filter_offer = None
         if prev_state == VENTAS:
             filter_offer = filter_ventas
+            type_ = Offers.VENTA
         elif prev_state == COMPRAS:
             filter_offer = filter_compras
+            type_ = Offers.COMPRA
         else:
             raise Exception('Invalid state. That\'s imposible')
 
-        # TODO Wired currencies
         keyboard_filtro_valor = [
             [
                 InlineKeyboardButton('< 5', callback_data=FILTER_VALOR_UP_TO_5),
@@ -309,13 +311,14 @@ class OfertasBot(Bot):
                 InlineKeyboardButton('Volver', callback_data=BACK),
             ]
         ]
+        msg = Messages.OFERTA.format(type_, MY_REFERRAL)
 
         if query.data == FILTER_VALOR_UP_TO_5:
-            offers = filter_offer(valor=dict(max=5))
+            offers = filter_offer(valor=PagoIntervals.MIN)
             if len(offers) == 0:
                 msg = 'No existe una oferta con esas caracteristicas'
             else:
-                msg = construct_oferta_msg(offers)
+                msg = msg + construct_oferta_msg(offers)
 
             query.edit_message_text(
                 text=msg,
@@ -323,11 +326,11 @@ class OfertasBot(Bot):
                 parse_mode=ParseMode.HTML
             )
         elif query.data == FILTER_VALOR_BETWEEN_5_AND_15:
-            offers = filter_offer(valor=dict(min=5, max=15))
+            offers = filter_offer(valor=PagoIntervals.MID)
             if len(offers) == 0:
                 msg = 'No existe una oferta con esas caracteristicas'
             else:
-                msg = construct_oferta_msg(offers)
+                msg = msg + construct_oferta_msg(offers)
 
             query.edit_message_text(
                 text=msg,
@@ -335,11 +338,11 @@ class OfertasBot(Bot):
                 parse_mode=ParseMode.HTML
             )
         elif query.data == FILTER_VALOR_BEYOND_15:
-            offers = filter_offer(valor=dict(min=15))
+            offers = filter_offer(valor=PagoIntervals.MAX)
             if len(offers) == 0:
                 msg = 'No existe una oferta con esas caracteristicas'
             else:
-                msg = construct_oferta_msg(offers)
+                msg = msg + construct_oferta_msg(offers)
 
             query.edit_message_text(
                 text=msg,
@@ -359,7 +362,6 @@ class OfertasBot(Bot):
         query = update.callback_query
         query.answer()
 
-        # TODO Avoid code duplication
         msg = ''
         if context.user_data.get('prev_state') == VENTAS:
             msg = gen_oferta_msg(Offers.VENTA)

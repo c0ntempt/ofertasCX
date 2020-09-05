@@ -1,6 +1,8 @@
 import logging
 import sys
 import time
+from enum import Enum
+
 import requests
 from ofertascx import settings
 from ofertascx.parser import process_table
@@ -94,9 +96,12 @@ def get_compras():
 
 
 def filter_offers(offers, **kwargs):
-    for _filter in kwargs:
-        if _filter not in FILTER_TYPE:
-            kwargs.pop(_filter)
+    # I dont like this
+    for key, value in list(kwargs.items()):
+        if key not in FILTER_TYPE:
+            kwargs.pop(key)
+        if isinstance(value, Enum):
+            kwargs[key] = value.value
 
     _offers = []
 
