@@ -123,15 +123,14 @@ def filter_offers(offers, **kwargs):
 
 
 def gen_key(**kwargs):
-    # Kinda ugly o_0
-    return '-'.join([('%s(%s)' % (i[0], i[1])).replace(' ', '') for i in sorted(kwargs.items())])
+    return '-'.join(['%s(%s)' % (i[0], i[1]) for i in sorted(kwargs.items())])
 
 
 def filter_ventas(**kwargs):
     """Shortcut for filter_offers with cache"""
 
     cache = Cache()
-    key = 'ventas/%s/' % gen_key(**kwargs)
+    key = 'ventas/%s' % gen_key(**kwargs)
 
     offers = cache.restore(key)
     if offers:
