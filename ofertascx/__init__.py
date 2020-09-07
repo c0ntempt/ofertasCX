@@ -128,7 +128,7 @@ def filter_offers(offers, **kwargs):
 
 
 def gen_key(**kwargs):
-    return '-'.join(['%s(%s)' % (i[0], i[1]) for i in sorted(kwargs.items())])
+    return '-'.join([('%s(%s)' % (i[0], i[1])).replace(' ', '') for i in sorted(kwargs.items())])
 
 
 def filter_ventas(**kwargs):
@@ -159,3 +159,26 @@ def filter_compras(**kwargs):
     offers = filter_offers(get_compras(), **kwargs)
     cache.store(key, offers)
     return offers
+
+
+# TODO perhaps implement cache
+def get_payment_types(filter) -> list:
+    if filter.get('offer', None) == Offers.VENTA:
+        filter_method = filter_ventas
+    elif filter.get('offer', None) == Offers.COMPRA:
+        filter_method = filter_compras
+    else:
+        raise Exception('Impossible')
+
+    if filter.get('cripto', None):
+        offers = filter_method(cripto=filter.get('cripto'))
+    else:
+        offers = filter_method()
+
+    payment_types = []
+    for offer in offers:
+        for ptype in offer['pago']:
+            if ptype not in payment_types:
+                payment_types.append(ptype)
+
+    return payment_types

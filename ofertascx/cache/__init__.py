@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Cache:
     class __Cache:
         def __init__(self):
-            self.client = Client(CACHE_CONN, serde=serde.pickle_serde)
+            self.client = Client(CACHE_CONN, serde=serde.pickle_serde, allow_unicode_keys=True)
 
     instance = None
 
