@@ -1,8 +1,9 @@
 import logging
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
-from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode, ReplyKeyboardMarkup
+from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler, MessageHandler, \
+    Filters
 
-from ofertascx import get_ventas, get_compras, Offers, filter_ventas, filter_compras
+from ofertascx import get_ventas, get_compras, Offers, filter_ventas, filter_compras, get_payment_types
 from ofertascx.bot import Bot
 from ofertascx.settings import MY_REFERRAL, URL_PUBLIC, PagoIntervals
 
@@ -38,7 +39,7 @@ keyboard_filtros = [
     [
         InlineKeyboardButton('Moneda', callback_data=FILTER_MONEDA),
         InlineKeyboardButton('Valor', callback_data=FILTER_VALOR),
-        # InlineKeyboardButton('Pago', callback_data=FILTER_PAGO),
+        InlineKeyboardButton('Pago', callback_data=FILTER_PAGO),
     ], [
         InlineKeyboardButton('Volver', callback_data=BACK),
     ]
@@ -53,24 +54,29 @@ class Messages:
         '\nEste bot no esta relacionado de forma alguna con el proyecto o desarrolladores '
         'de <a href="' + MY_REFERRAL + '">CubaXchange</a>. '
     )
-    OFERTA = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'
+
+    OFFER = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'
+
+    SELECT_COIN = ''
+
+    WRONG_METHOD = 'Metodo de pago incorrecto, seleccione uno de la lista.'
+
+    WRONG_OFFER = 'Tipo de oferta no encontrado'
+
+    NO_OFFERS = 'No existe una oferta con esas caracteristicas'
+
+    SELECT_PAYMENT = 'Seleccione el tipo de pago deseado:'
 
 
-def gen_oferta_msg(type_=Offers.VENTA):
-    if type_ not in Offers:
-        raise Exception('Invalid offer type')
-    get_ofertas = get_ventas if type_ == Offers.VENTA else get_compras
-
-    msg = Messages.OFERTA.format(type_, MY_REFERRAL)
-    msg = msg + construct_oferta_msg(get_ofertas())
-    return msg
-
-
-def construct_oferta_msg(ofertas):
+def construct_oferta_msg(ofertas, type_=Offers.VENTA):
     # TODO  Check for messages' length
     # TODO  Implement pagination
 
-    msg = ''
+    if type_ not in Offers:
+        raise Exception('Invalid offer type')
+
+    msg = Messages.OFFER.format(type_, MY_REFERRAL)
+
     for oferta in ofertas:
         msg = msg + '{cripto} ({valor}%) - <code>{usuario}</code>\n'.format(
             cripto=oferta.get('cripto'),
@@ -78,6 +84,30 @@ def construct_oferta_msg(ofertas):
             usuario=oferta.get('usuario'),
         )
     return msg
+
+
+def get_current_offer(prev_state) -> tuple:
+    """Returns filter_offer callback and offer's type"""
+    if not prev_state:
+        raise Exception('Invalid prev state. Imposible to be here')
+
+    if prev_state == VENTAS:
+        filter_offer = filter_ventas
+        type_ = Offers.VENTA
+    elif prev_state == COMPRAS:
+        filter_offer = filter_compras
+        type_ = Offers.COMPRA
+    else:
+        raise Exception('Invalid state. That\'s imposible')
+
+    return filter_offer, type_
+
+
+# def clear_filters(filters):
+#     for f in list(filters.keys()):
+#         if f != 'offer':
+#             filters.pop(f)
+#     return filters
 
 
 class OfertasBot(Bot):
@@ -115,6 +145,9 @@ class OfertasBot(Bot):
                     CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR_BETWEEN_5_AND_15 + '$'),
                     CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR_BEYOND_15 + '$'),
 
+                    CallbackQueryHandler(self.command_filter_pago, pattern='^' + FILTER_PAGO + '$'),
+                    MessageHandler(Filters.text & ~Filters.command, self.command_filter_pago),
+
                     CallbackQueryHandler(self.command_back, pattern='^' + BACK + '$'),
                 ]
             },
@@ -137,6 +170,7 @@ class OfertasBot(Bot):
         )
 
         context.user_data['prev_state'] = None
+        context.user_data['user_id'] = user.id
 
         return START
 
@@ -150,6 +184,9 @@ class OfertasBot(Bot):
             parse_mode=ParseMode.HTML
         )
 
+        if context.user_data.get('filter'):
+            context.user_data.pop('filter')
+
         context.user_data['prev_state'] = START
 
         return START
@@ -158,8 +195,10 @@ class OfertasBot(Bot):
         query = update.callback_query
         query.answer()
 
+        # context.user_data['filter'] = dict(offer=Offers.VENTA)
+
         query.edit_message_text(
-            text=gen_oferta_msg(),
+            text=construct_oferta_msg(get_ventas(), Offers.VENTA),
             reply_markup=InlineKeyboardMarkup(keyboard_oferta),
             parse_mode=ParseMode.HTML
         )
@@ -172,8 +211,10 @@ class OfertasBot(Bot):
         query = update.callback_query
         query.answer()
 
+        # context.user_data['filter'] = dict(offer=Offers.COMPRA)
+
         query.edit_message_text(
-            text=gen_oferta_msg(Offers.COMPRA),
+            text=construct_oferta_msg(get_compras(), Offers.COMPRA),
             reply_markup=InlineKeyboardMarkup(keyboard_oferta),
             parse_mode=ParseMode.HTML
         )
@@ -186,11 +227,12 @@ class OfertasBot(Bot):
         query = update.callback_query
         query.answer()
 
-        msg = ''
         if context.user_data.get('prev_state') == VENTAS:
-            msg = gen_oferta_msg(Offers.VENTA)
+            msg = construct_oferta_msg(get_ventas(), Offers.VENTA)
         elif context.user_data.get('prev_state') == COMPRAS:
-            msg = gen_oferta_msg(Offers.COMPRA)
+            msg = construct_oferta_msg(get_compras(), Offers.COMPRA)
+        else:
+            raise Exception('Tipo de oferta invalido')
 
         query.edit_message_text(
             text=msg,
@@ -204,19 +246,8 @@ class OfertasBot(Bot):
         query = update.callback_query
         query.answer()
 
-        prev_state = context.user_data.get('prev_state')
-        if not prev_state:
-            raise Exception('Invalid prev state. Imposible to be here')
+        filter_offer, type_ = get_current_offer(context.user_data.get('prev_state', None))
 
-        filter_offer = None
-        if prev_state == VENTAS:
-            filter_offer = filter_ventas
-        elif prev_state == COMPRAS:
-            filter_offer = filter_compras
-        else:
-            raise Exception('Invalid state. That\'s imposible')
-
-        # TODO Wired currencies
         keyboard_filtro_moneda = [
             [
                 InlineKeyboardButton('BTC', callback_data=FILTER_MONEDA_BTC),
@@ -224,6 +255,7 @@ class OfertasBot(Bot):
                 InlineKeyboardButton('ETH', callback_data=FILTER_MONEDA_ETH),
                 InlineKeyboardButton('USD', callback_data=FILTER_MONEDA_USD),
             ], [
+                # InlineKeyboardButton('Pago', callback_data=FILTER_PAGO),
                 InlineKeyboardButton('Volver', callback_data=BACK),
             ]
         ]
@@ -231,9 +263,10 @@ class OfertasBot(Bot):
         if query.data == FILTER_MONEDA_BTC:
             offers = filter_offer(cripto='BTC')
             if len(offers) == 0:
-                msg = 'No existe una oferta con esas caracteristicas'
+                msg = Messages.NO_OFFERS
             else:
-                msg = construct_oferta_msg(offers)
+                msg = construct_oferta_msg(offers, type_)
+                # context.user_data['filter'].update(dict(cripto='BTC'))
 
             query.edit_message_text(
                 text=msg,
@@ -245,7 +278,8 @@ class OfertasBot(Bot):
             if len(offers) == 0:
                 msg = 'No existe una oferta con esas caracteristicas'
             else:
-                msg = construct_oferta_msg(offers)
+                msg = construct_oferta_msg(offers, type_)
+                # context.user_data['filter'].update(dict(cripto='LTC'))
 
             query.edit_message_text(
                 text=msg,
@@ -257,7 +291,8 @@ class OfertasBot(Bot):
             if len(offers) == 0:
                 msg = 'No existe una oferta con esas caracteristicas'
             else:
-                msg = construct_oferta_msg(offers)
+                msg = construct_oferta_msg(offers, type_)
+                # context.user_data['filter'].update(dict(cripto='ETH'))
 
             query.edit_message_text(
                 text=msg,
@@ -269,7 +304,8 @@ class OfertasBot(Bot):
             if len(offers) == 0:
                 msg = 'No existe una oferta con esas caracteristicas'
             else:
-                msg = construct_oferta_msg(offers)
+                msg = construct_oferta_msg(offers, type_)
+                # context.user_data['filter'].update(dict(cripto='USD'))
 
             query.edit_message_text(
                 text=msg,
@@ -277,8 +313,15 @@ class OfertasBot(Bot):
                 parse_mode=ParseMode.HTML
             )
         else:
+            if context.user_data.get('prev_state') == VENTAS:
+                msg = construct_oferta_msg(get_ventas(), Offers.VENTA)
+            elif context.user_data.get('prev_state') == COMPRAS:
+                msg = construct_oferta_msg(get_compras(), Offers.COMPRA)
+            else:
+                raise Exception(Messages.WRONG_OFFER)
+
             query.edit_message_text(
-                text='Seleccione moneda',
+                text=msg + '\n' + Messages.SELECT_COIN,
                 reply_markup=InlineKeyboardMarkup(keyboard_filtro_moneda),
                 parse_mode=ParseMode.HTML
             )
@@ -289,18 +332,7 @@ class OfertasBot(Bot):
         query = update.callback_query
         query.answer()
 
-        prev_state = context.user_data.get('prev_state')
-        if not prev_state:
-            raise Exception('Invalid prev state. Imposible to be here')
-
-        if prev_state == VENTAS:
-            filter_offer = filter_ventas
-            type_ = Offers.VENTA
-        elif prev_state == COMPRAS:
-            filter_offer = filter_compras
-            type_ = Offers.COMPRA
-        else:
-            raise Exception('Invalid state. That\'s imposible')
+        filter_offer, type_ = get_current_offer(context.user_data.get('prev_state', None))
 
         keyboard_filtro_valor = [
             [
@@ -311,7 +343,7 @@ class OfertasBot(Bot):
                 InlineKeyboardButton('Volver', callback_data=BACK),
             ]
         ]
-        msg = Messages.OFERTA.format(type_, MY_REFERRAL)
+        msg = Messages.OFFER.format(type_, MY_REFERRAL)
 
         if query.data == FILTER_VALOR_UP_TO_5:
             offers = filter_offer(valor=PagoIntervals.MIN)
@@ -358,15 +390,65 @@ class OfertasBot(Bot):
 
         return FILTER
 
+    def command_filter_pago(self, update: Update, context: CallbackContext):
+
+        if context.user_data.get('prev_state') == VENTAS:
+            filters = dict(offer=Offers.VENTA)
+        elif context.user_data.get('prev_state') == COMPRAS:
+            filters = dict(offer=Offers.COMPRA)
+        else:
+            raise Exception('Tipo de oferta invalido')
+
+        payment_types = get_payment_types(filters)
+
+        # When used as callback: Show keyboard
+        if update.callback_query:
+            query = update.callback_query
+            query.answer()
+
+            keyboard = []
+            for j in range(0, len(payment_types), 3):
+                temp = []
+                for i in range(3):
+                    if j + i < len(payment_types):
+                        temp.append(payment_types[j + i])
+                keyboard.append(temp)
+
+            context.bot.send_message(
+                context.user_data.get('user_id'),
+                Messages.SELECT_PAYMENT,
+                reply_markup=ReplyKeyboardMarkup(keyboard)#, one_time_keyboard=True)
+            )
+
+            return FILTER
+
+        else:   # Method as a MessageHandler
+            payment = update.message.text
+
+            if payment not in payment_types:
+                msg = Messages.WRONG_METHOD
+            else:
+                filter_offer, type_ = get_current_offer(context.user_data.get('prev_state', None))
+                filters.update(dict(pago=payment))
+
+                offers = filter_offer(**filters)
+                msg = construct_oferta_msg(offers)
+
+            context.bot.send_message(
+                context.user_data.get('user_id'),
+                msg,
+                parse_mode=ParseMode.HTML
+            )
+
     def command_back(self, update: Update, context: CallbackContext):
         query = update.callback_query
         query.answer()
 
         msg = ''
         if context.user_data.get('prev_state') == VENTAS:
-            msg = gen_oferta_msg(Offers.VENTA)
+            msg = construct_oferta_msg(get_ventas(), Offers.VENTA)
         elif context.user_data.get('prev_state') == COMPRAS:
-            msg = gen_oferta_msg(Offers.COMPRA)
+            msg = construct_oferta_msg(get_compras(), Offers.COMPRA)
 
         query.edit_message_text(
             text=msg,
