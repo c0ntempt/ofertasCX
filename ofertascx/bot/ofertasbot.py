@@ -276,7 +276,7 @@ class OfertasBot(Bot):
         elif query.data == FILTER_MONEDA_LTC:
             offers = filter_offer(cripto='LTC')
             if len(offers) == 0:
-                msg = 'No existe una oferta con esas caracteristicas'
+                msg = Messages.NO_OFFERS
             else:
                 msg = construct_oferta_msg(offers, type_)
                 # context.user_data['filter'].update(dict(cripto='LTC'))
@@ -289,7 +289,7 @@ class OfertasBot(Bot):
         elif query.data == FILTER_MONEDA_ETH:
             offers = filter_offer(cripto='ETH')
             if len(offers) == 0:
-                msg = 'No existe una oferta con esas caracteristicas'
+                msg = Messages.NO_OFFERS
             else:
                 msg = construct_oferta_msg(offers, type_)
                 # context.user_data['filter'].update(dict(cripto='ETH'))
@@ -302,7 +302,7 @@ class OfertasBot(Bot):
         elif query.data == FILTER_MONEDA_USD:
             offers = filter_offer(cripto='USD')
             if len(offers) == 0:
-                msg = 'No existe una oferta con esas caracteristicas'
+                msg = Messages.NO_OFFERS
             else:
                 msg = construct_oferta_msg(offers, type_)
                 # context.user_data['filter'].update(dict(cripto='USD'))
@@ -343,14 +343,14 @@ class OfertasBot(Bot):
                 InlineKeyboardButton('Volver', callback_data=BACK),
             ]
         ]
-        msg = Messages.OFFER.format(type_, MY_REFERRAL)
+        # msg = Messages.OFFER.format(type_, MY_REFERRAL)
 
         if query.data == FILTER_VALOR_UP_TO_5:
             offers = filter_offer(valor=PagoIntervals.MIN)
             if len(offers) == 0:
-                msg = 'No existe una oferta con esas caracteristicas'
+                msg = Messages.NO_OFFERS
             else:
-                msg = msg + construct_oferta_msg(offers)
+                msg = construct_oferta_msg(offers, type_)
 
             query.edit_message_text(
                 text=msg,
@@ -360,9 +360,9 @@ class OfertasBot(Bot):
         elif query.data == FILTER_VALOR_BETWEEN_5_AND_15:
             offers = filter_offer(valor=PagoIntervals.MID)
             if len(offers) == 0:
-                msg = 'No existe una oferta con esas caracteristicas'
+                msg = Messages.NO_OFFERS
             else:
-                msg = msg + construct_oferta_msg(offers)
+                msg = construct_oferta_msg(offers, type_)
 
             query.edit_message_text(
                 text=msg,
@@ -372,9 +372,9 @@ class OfertasBot(Bot):
         elif query.data == FILTER_VALOR_BEYOND_15:
             offers = filter_offer(valor=PagoIntervals.MAX)
             if len(offers) == 0:
-                msg = 'No existe una oferta con esas caracteristicas'
+                msg = Messages.NO_OFFERS
             else:
-                msg = msg + construct_oferta_msg(offers)
+                msg = construct_oferta_msg(offers, type_)
 
             query.edit_message_text(
                 text=msg,
@@ -432,7 +432,7 @@ class OfertasBot(Bot):
                 filters.update(dict(pago=payment))
 
                 offers = filter_offer(**filters)
-                msg = construct_oferta_msg(offers)
+                msg = construct_oferta_msg(offers, type_)
 
             context.bot.send_message(
                 context.user_data.get('user_id'),
