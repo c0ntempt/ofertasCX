@@ -15,15 +15,10 @@ logger = logging.getLogger(__name__)
 # States
 START, VENTAS, COMPRAS, FILTER = map(chr, range(4))
 
-
 # Callback data
 VENTAS_CB, COMPRAS_CB, FILTER_CB, BACK, \
-FILTER_MONEDA, FILTER_VALOR, FILTER_PAGO, \
-FILTER_MONEDA_BTC, FILTER_MONEDA_LTC, FILTER_MONEDA_ETH, FILTER_MONEDA_USD, \
-FILTER_VALOR_UP_TO_5, \
-FILTER_VALOR_BETWEEN_5_AND_15, \
-FILTER_VALOR_BEYOND_15 = map(chr, range(14))
-
+FILTER_MONEDA, FILTER_PAGO, \
+FILTER_MONEDA_BTC, FILTER_MONEDA_LTC, FILTER_MONEDA_ETH, FILTER_MONEDA_USD = map(chr, range(10))
 
 keyboard_start = [[
     InlineKeyboardButton('Ventas', callback_data=VENTAS_CB),
@@ -38,7 +33,6 @@ keyboard_oferta = [[
 keyboard_filtros = [
     [
         InlineKeyboardButton('Moneda', callback_data=FILTER_MONEDA),
-        InlineKeyboardButton('Valor', callback_data=FILTER_VALOR),
         InlineKeyboardButton('Pago', callback_data=FILTER_PAGO),
     ], [
         InlineKeyboardButton('Volver', callback_data=BACK),
@@ -134,18 +128,13 @@ class OfertasBot(Bot):
                 ],
                 FILTER: [
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA + '$'),
-                    CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR + '$'),
-
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA_BTC + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA_LTC + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA_ETH + '$'),
                     CallbackQueryHandler(self.command_filter_moneda, pattern='^' + FILTER_MONEDA_USD + '$'),
 
-                    CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR_UP_TO_5 + '$'),
-                    CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR_BETWEEN_5_AND_15 + '$'),
-                    CallbackQueryHandler(self.command_filter_valor, pattern='^' + FILTER_VALOR_BEYOND_15 + '$'),
-
                     CallbackQueryHandler(self.command_filter_pago, pattern='^' + FILTER_PAGO + '$'),
+
                     MessageHandler(Filters.text & ~Filters.command, self.command_filter_pago),
 
                     CallbackQueryHandler(self.command_back, pattern='^' + BACK + '$'),
@@ -328,68 +317,6 @@ class OfertasBot(Bot):
 
         return FILTER
 
-    def command_filter_valor(self, update: Update, context: CallbackContext):
-        query = update.callback_query
-        query.answer()
-
-        filter_offer, type_ = get_current_offer(context.user_data.get('prev_state', None))
-
-        keyboard_filtro_valor = [
-            [
-                InlineKeyboardButton('< 5', callback_data=FILTER_VALOR_UP_TO_5),
-                InlineKeyboardButton('Entre 5 y 15', callback_data=FILTER_VALOR_BETWEEN_5_AND_15),
-                InlineKeyboardButton('> 15', callback_data=FILTER_VALOR_BEYOND_15),
-            ], [
-                InlineKeyboardButton('Volver', callback_data=BACK),
-            ]
-        ]
-        # msg = Messages.OFFER.format(type_, MY_REFERRAL)
-
-        if query.data == FILTER_VALOR_UP_TO_5:
-            offers = filter_offer(valor=PagoIntervals.MIN)
-            if len(offers) == 0:
-                msg = Messages.NO_OFFERS
-            else:
-                msg = construct_oferta_msg(offers, type_)
-
-            query.edit_message_text(
-                text=msg,
-                reply_markup=InlineKeyboardMarkup(keyboard_filtro_valor),
-                parse_mode=ParseMode.HTML
-            )
-        elif query.data == FILTER_VALOR_BETWEEN_5_AND_15:
-            offers = filter_offer(valor=PagoIntervals.MID)
-            if len(offers) == 0:
-                msg = Messages.NO_OFFERS
-            else:
-                msg = construct_oferta_msg(offers, type_)
-
-            query.edit_message_text(
-                text=msg,
-                reply_markup=InlineKeyboardMarkup(keyboard_filtro_valor),
-                parse_mode=ParseMode.HTML
-            )
-        elif query.data == FILTER_VALOR_BEYOND_15:
-            offers = filter_offer(valor=PagoIntervals.MAX)
-            if len(offers) == 0:
-                msg = Messages.NO_OFFERS
-            else:
-                msg = construct_oferta_msg(offers, type_)
-
-            query.edit_message_text(
-                text=msg,
-                reply_markup=InlineKeyboardMarkup(keyboard_filtro_valor),
-                parse_mode=ParseMode.HTML
-            )
-        else:
-            query.edit_message_text(
-                text='Seleccione intervalo',
-                reply_markup=InlineKeyboardMarkup(keyboard_filtro_valor),
-                parse_mode=ParseMode.HTML
-            )
-
-        return FILTER
-
     def command_filter_pago(self, update: Update, context: CallbackContext):
 
         if context.user_data.get('prev_state') == VENTAS:
@@ -417,12 +344,12 @@ class OfertasBot(Bot):
             context.bot.send_message(
                 context.user_data.get('user_id'),
                 Messages.SELECT_PAYMENT,
-                reply_markup=ReplyKeyboardMarkup(keyboard)#, one_time_keyboard=True)
+                reply_markup=ReplyKeyboardMarkup(keyboard)  # , one_time_keyboard=True)
             )
 
             return FILTER
 
-        else:   # Method as a MessageHandler
+        else:  # Method as a MessageHandler
             payment = update.message.text
 
             if payment not in payment_types:
