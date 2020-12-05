@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
+import re
 
 
 def process_table(selector: str, page: str) -> iter:
@@ -20,3 +21,29 @@ def process_table(selector: str, page: str) -> iter:
             pago=[i.strip() for i in data[6].text.strip().split('\n') if not i.isspace()],
             timestamp=timestamp
         )
+
+
+def process_public_profile(page: str) -> dict:
+    all_data = BeautifulSoup(page, 'html.parser').find(name='div', attrs={'class': 'main', 'role': 'main'}) \
+        .find_all(attrs={'class': 'card-body'})
+
+    # Datos principales
+    pattern = re.compile(r'Nombre de Usuario:\s+(?P<username>.*)' \
+                         'Última vez en el sitio:.*Votos de confianza: (?P<trust>\d+)' \
+                         ' Usuarios que lo ignoran: (?P<distrust>\d+)')
+
+    profile = all_data[0].find_all(attrs={'class': 'col-md-6'})[1]  #.text.strip().replace('\n', ' ')
+
+    # Contains username, trust and distrust
+    data = pattern.match(profile.text.strip().replace('\n', ' '))
+    if data:
+        data = {k: v.strip() for k, v in data.groupdict().items()}
+        if 'fa-check-circle' in profile.span.attrs['class']:
+            kyc = True
+        elif 'fa-window-close' in profile.span.attrs['class']:
+            kyc = False
+        else:
+            kyc = '?'
+        data.update({'kyc': kyc})
+
+    return data
