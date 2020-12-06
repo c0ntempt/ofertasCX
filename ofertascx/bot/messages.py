@@ -11,6 +11,15 @@ class Messages:
         'de <a href="' + MY_REFERRAL + '">CubaXchange</a>. '
     )
 
+    HELP = """
+<b>Comandos para interactuar con el bot</b>
+
+/start - Inicia conversacion con el bot, muestra mensaje interactivo mediante botones.
+
+/link user[ user2 ...] - Provee enlace del perfil publico del(de los) usuario(s) especificado(s) (note que no comprueba que el usuario existe realmente)
+    
+/user user - Devuelve informacion del perfil publico del usuario especificado."""
+
     OFFER = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'
 
     WRONG_METHOD = 'Metodo de pago incorrecto, seleccione uno de la lista.'

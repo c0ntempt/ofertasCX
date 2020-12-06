@@ -127,6 +127,7 @@ class OfertasBot(Bot):
 
         dispatcher.add_handler(CommandHandler('link', self.command_user_link))
         dispatcher.add_handler(CommandHandler('user', self.command_user_profile))
+        dispatcher.add_handler(CommandHandler('help', self.command_help))
 
     def command_start(self, update: Update, context: CallbackContext):
         """Send message on `/start`."""
@@ -144,6 +145,11 @@ class OfertasBot(Bot):
         context.user_data['user_id'] = user.id
 
         return START
+
+    def command_help(self, update: Update, context: CallbackContext):
+        update.message.reply_html(
+            Messages.HELP,
+        )
 
     def command_start_inline(self, update: Update, context: CallbackContext):
         query = update.callback_query
