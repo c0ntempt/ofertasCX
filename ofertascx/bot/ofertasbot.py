@@ -7,7 +7,8 @@ from ofertascx import get_ventas, get_compras, Offers, \
     filter_ventas, filter_compras, get_payment_types, \
     gen_user_profile_link, scrape_user_profile
 from ofertascx.bot import Bot
-from ofertascx.settings import MY_REFERRAL, EMOJI_THUMBS_DOWN, EMOJI_THUMBS_UP
+from ofertascx.bot.messages import Messages
+from ofertascx.settings import MY_REFERRAL
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -40,34 +41,6 @@ keyboard_filtros = [
         InlineKeyboardButton('Volver', callback_data=BACK),
     ]
 ]
-
-
-# TODO Look for better variable names 0_o
-class Messages:
-    WELCOME = (
-        '<b>Bienvenido a OfertasCX bot.</b>\n'
-        'Aqui podras encontrar de manera facil y actualizada las distintas ofertas que son publicadas '
-        'en la plataforma.\nDatos actualizados cada 10 minutos. Espero que les sirva de ayuda.'
-        '\nEste bot no esta relacionado de forma alguna con el proyecto o desarrolladores '
-        'de <a href="' + MY_REFERRAL + '">CubaXchange</a>. '
-    )
-
-    OFFER = '<b>Ofertas de {0}</b>\n<a href="{1}">CubaXchange</a>\n\n'
-
-    SELECT_COIN = ''
-
-    WRONG_METHOD = 'Metodo de pago incorrecto, seleccione uno de la lista.'
-
-    WRONG_OFFER = 'Tipo de oferta no encontrado'
-
-    NO_OFFERS = 'No existe una oferta con esas caracteristicas'
-
-    SELECT_PAYMENT = 'Seleccione el tipo de pago deseado:'
-
-    TYPE_USER = 'Introduzca al menos un usuario'
-
-    USER_PROFILE = '{kyc}<b>{username}</b>\n'\
-                   '%s {trust} %s {distrust}' % (EMOJI_THUMBS_UP, EMOJI_THUMBS_DOWN)
 
 
 def construct_oferta_msg(ofertas, type_=Offers.VENTA):
