@@ -1,5 +1,5 @@
 import os
-from enum import Enum
+from emoji import emojize
 
 
 TESTING = bool(os.environ.get('OCX_TESTING', False))
@@ -17,10 +17,8 @@ USER_AGENT = {
 }
 
 
-class PagoIntervals(Enum):
-    MIN = {'max': 5}
-    MID = {'min': 5, 'max': 15}
-    MAX = {'min': 15}
-
-    def __str__(self):
-        return self.name
+# Emojis
+EMOJI_OK = emojize(':white_check_mark:', use_aliases=True)
+EMOJI_KO = emojize(':x:', use_aliases=True)
+EMOJI_THUMBS_UP = emojize(':+1:', use_aliases=True)
+EMOJI_THUMBS_DOWN = emojize(':-1:', use_aliases=True)

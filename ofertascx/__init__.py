@@ -5,8 +5,9 @@ from enum import Enum
 
 import requests
 from ofertascx import settings
-from ofertascx.parser import process_table
+from ofertascx.parser import process_table, process_public_profile
 from ofertascx.cache import Cache
+from ofertascx.settings import URL_PUBLIC
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -42,32 +43,40 @@ def delay_check(start, info, threshold=1.5):
         logger.warning('Slow function detected: %s seconds in %s', delay, info)
 
 
-def get_page() -> str or bool:
+def get_page(url) -> str or bool:
     """Fetch cubaxchange public offers page"""
-    r = None
     start = time.time()
     try:
-        r = requests.get(settings.URL_OFFERS, headers=settings.USER_AGENT)
+        r = requests.get(url, headers=settings.USER_AGENT, allow_redirects=False)
     except Exception as e:
         logger.error(e)
         return False
     finally:
         delay_check(start, get_page.__name__)
 
-    if r and r.status_code == requests.codes.ok:
+    if r and r.status_code == requests.codes.ok and r.text:
         return r.text
-    raise Exception('Something bad happen while fetching the page: %s' % r.reason)
+    # TODO Improve this
+    raise Exception('Something bad happen while fetching the page: (%s, %s, %s)' % (url, r.status_code, r.reason))
 
 
 def scrape_offers():
     cache = Cache()
-    html = get_page()
+    html = get_page(settings.URL_OFFERS)
 
     if not html:
         raise Exception('Could not fetch offers page')
 
     for offer in Offers:
         cache.store(offer, list(process_table(selector=offer, page=html)))
+
+
+def scrape_user_profile(user_url: str):
+    # TODO Implement cache
+    html = get_page(user_url)
+    if not html:
+        raise Exception('Could not fetch profile page: %s' % user_url)
+    return process_public_profile(html)
 
 
 def get_offer(type_=Offers.VENTA):
@@ -129,6 +138,10 @@ def filter_offers(offers, **kwargs):
 
 def gen_key(**kwargs):
     return '-'.join([('%s(%s)' % (i[0], i[1])).replace(' ', '') for i in sorted(kwargs.items())])
+
+
+def gen_user_profile_link(user):
+    return '{0}/{1}'.format(URL_PUBLIC, user)
 
 
 def filter_ventas(**kwargs):

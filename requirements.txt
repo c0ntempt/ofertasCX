@@ -2,3 +2,4 @@ requests==2.24.0
 beautifulsoup4==4.9.1
 python-telegram-bot==12.8
 pymemcache==3.3.0
+emoji==0.6.0

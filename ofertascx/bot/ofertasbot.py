@@ -3,9 +3,11 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ParseMo
 from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler, MessageHandler, \
     Filters
 
-from ofertascx import get_ventas, get_compras, Offers, filter_ventas, filter_compras, get_payment_types
+from ofertascx import get_ventas, get_compras, Offers, \
+    filter_ventas, filter_compras, get_payment_types, \
+    gen_user_profile_link, scrape_user_profile
 from ofertascx.bot import Bot
-from ofertascx.settings import MY_REFERRAL, URL_PUBLIC, PagoIntervals
+from ofertascx.settings import MY_REFERRAL, EMOJI_THUMBS_DOWN, EMOJI_THUMBS_UP
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -40,6 +42,7 @@ keyboard_filtros = [
 ]
 
 
+# TODO Look for better variable names 0_o
 class Messages:
     WELCOME = (
         '<b>Bienvenido a OfertasCX bot.</b>\n'
@@ -60,6 +63,11 @@ class Messages:
     NO_OFFERS = 'No existe una oferta con esas caracteristicas'
 
     SELECT_PAYMENT = 'Seleccione el tipo de pago deseado:'
+
+    TYPE_USER = 'Introduzca al menos un usuario'
+
+    USER_PROFILE = '{kyc}<b>{username}</b>\n'\
+                   '%s {trust} %s {distrust}' % (EMOJI_THUMBS_UP, EMOJI_THUMBS_DOWN)
 
 
 def construct_oferta_msg(ofertas, type_=Offers.VENTA):
@@ -145,6 +153,7 @@ class OfertasBot(Bot):
         dispatcher.add_handler(conv_handler)
 
         dispatcher.add_handler(CommandHandler('link', self.command_user_link))
+        dispatcher.add_handler(CommandHandler('user', self.command_user_profile))
 
     def command_start(self, update: Update, context: CallbackContext):
         """Send message on `/start`."""
@@ -388,10 +397,22 @@ class OfertasBot(Bot):
     def command_user_link(self, update: Update, context: CallbackContext):
         users = update.message.text.split(' ')
         if len(users) <= 1:
-            update.message.reply_text('Introduzca al menos un usuario')
+            update.message.reply_text(Messages.TYPE_USER)
         else:
             msg = ''
-            for i in range(1, len(users)):
-                msg = msg + '{0}/{1}\n'.format(URL_PUBLIC, users[i])
+            for user in users[1:]:
+                msg = msg + gen_user_profile_link(user) + '\n'
 
             update.message.reply_text(msg)
+
+    def command_user_profile(self, update: Update, context: CallbackContext):
+        users = update.message.text.split(' ')
+        if len(users) <= 1:
+            update.message.reply_text('')
+        else:
+            user_data = scrape_user_profile(gen_user_profile_link(users[1]))
+            if user_data:
+                msg = Messages.USER_PROFILE.format(**user_data)
+            else:
+                msg = f'Usuario {users[1]} no encontrado'
+            update.message.reply_html(msg)

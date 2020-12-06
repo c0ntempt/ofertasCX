@@ -2,6 +2,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import re
 
+from ofertascx.settings import EMOJI_OK, EMOJI_KO
+
 
 def process_table(selector: str, page: str) -> iter:
     html = BeautifulSoup(page, 'html.parser')
@@ -39,9 +41,9 @@ def process_public_profile(page: str) -> dict:
     if data:
         data = {k: v.strip() for k, v in data.groupdict().items()}
         if 'fa-check-circle' in profile.span.attrs['class']:
-            kyc = True
+            kyc = EMOJI_OK
         elif 'fa-window-close' in profile.span.attrs['class']:
-            kyc = False
+            kyc = EMOJI_KO
         else:
             kyc = '?'
         data.update({'kyc': kyc})
