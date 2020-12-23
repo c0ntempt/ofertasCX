@@ -298,7 +298,7 @@ class OfertasBot(Bot):
                 raise Exception(Messages.WRONG_OFFER)
 
             query.edit_message_text(
-                text=msg + '\n' + Messages.SELECT_COIN,
+                text=msg,
                 reply_markup=InlineKeyboardMarkup(keyboard_filtro_moneda),
                 parse_mode=ParseMode.HTML
             )
