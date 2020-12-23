@@ -54,9 +54,12 @@ def get_page(url) -> str or bool:
     finally:
         delay_check(start, get_page.__name__)
 
-    if r and r.status_code == requests.codes.ok and r.text:
+    if r and r.status_code == requests.codes.ok:
         return r.text
-    # TODO Improve this
+
+    # TODO Improve this, this is not scalable
+    if r.status_code == requests.codes.found:
+        return ''
     raise Exception('Something bad happen while fetching the page: (%s, %s, %s)' % (url, r.status_code, r.reason))
 
 
@@ -75,7 +78,7 @@ def scrape_user_profile(user_url: str):
     # TODO Implement cache
     html = get_page(user_url)
     if not html:
-        raise Exception('Could not fetch profile page: %s' % user_url)
+        return ''
     return process_public_profile(html)
 
 
