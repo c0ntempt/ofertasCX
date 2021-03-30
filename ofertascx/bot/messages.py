@@ -7,7 +7,7 @@ class Messages:
         '<b>Bienvenido a OfertasCX bot.</b>\n'
         'Aqui podras encontrar de manera facil y actualizada las distintas ofertas que son publicadas '
         'en la plataforma.\nDatos actualizados cada 10 minutos. Espero que les sirva de ayuda.'
-        '\nEste bot no esta relacionado de forma alguna con el proyecto o desarrolladores '
+        '\nEste bot no esta asociado a los desarrolladores '
         'de <a href="' + MY_REFERRAL + '">CubaXchange</a>. '
     )
 

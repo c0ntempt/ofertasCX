@@ -10,7 +10,7 @@ DEVELOPER_CHAT_ID = os.environ.get('DEVELOPER_CHAT_ID')
 URL_BASE = 'https://cubaxchange.com'
 URL_PUBLIC = URL_BASE + '/public'
 URL_OFFERS = URL_BASE + '/offers'
-MY_REFERRAL = 'https://bit.ly/2ZtAyrq'
+MY_REFERRAL = 'https://cubaxchange.com/register-by-url/4aa1a852-f294-49ca-88b1-e00d7ab3636f'
 
 USER_AGENT = {
     'user-agent': 'ofertascx/bot contact: https://t.me/n3s7or'
