@@ -18,7 +18,7 @@ class Bot:
         # Create the Updater and pass it your bot's token.
         # Make sure to set use_context=True to use the new context based callbacks
         # Post version 12 this will no longer be necessary
-        self.updater = Updater(token, use_context=True)
+        self.updater = Updater(token, use_context=True, workers=2)
 
     def bind_commands(self):
         raise Exception('Not Implemented')
