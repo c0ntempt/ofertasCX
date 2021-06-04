@@ -432,6 +432,5 @@ class OfertasBot(Bot):
 
         if game_short_name:
             query.answer(url="https://n3s7or.github.io/tictactoe-react/")
-            return
-
-        query.answer()
+        else:
+            query.answer()
