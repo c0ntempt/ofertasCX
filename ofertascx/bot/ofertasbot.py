@@ -1,7 +1,8 @@
 import logging
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode, ReplyKeyboardMarkup
-from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler, MessageHandler, \
-    Filters
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode, ReplyKeyboardMarkup, \
+    InlineQueryResultGame
+from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler, \
+    MessageHandler, Filters, InlineQueryHandler
 
 from ofertascx import get_ventas, get_compras, Offers, \
     filter_ventas, filter_compras, get_payment_types, \
@@ -9,6 +10,8 @@ from ofertascx import get_ventas, get_compras, Offers, \
 from ofertascx.bot import Bot
 from ofertascx.bot.messages import Messages
 from ofertascx.settings import MY_REFERRAL
+from uuid import uuid4
+
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -128,6 +131,10 @@ class OfertasBot(Bot):
         dispatcher.add_handler(CommandHandler('link', self.command_user_link))
         dispatcher.add_handler(CommandHandler('user', self.command_user_profile))
         dispatcher.add_handler(CommandHandler('help', self.command_help))
+
+        dispatcher.add_handler(CallbackQueryHandler(self.game))
+
+        dispatcher.add_handler(InlineQueryHandler(self.inlinequery))
 
     def command_start(self, update: Update, context: CallbackContext):
         """Send message on `/start`."""
@@ -395,3 +402,36 @@ class OfertasBot(Bot):
             else:
                 msg = f'Usuario {users[1]} no encontrado'
             update.message.reply_html(msg)
+
+    # def tictactoe(self, update: Update, context: CallbackContext):
+    #     """Send message on `/start`."""
+    #     # Get user that sent /start and log his name
+    #     user = update.message.from_user
+    #     logger.info("User %s started tictactoe.", user.first_name)
+    #
+    #     update.message
+
+    def inlinequery(self, update: Update, _: CallbackContext):
+        query = update.inline_query.query
+
+        if query == "":
+            return
+
+        results = [
+            InlineQueryResultGame(
+                id=str(uuid4()),
+                game_short_name="tictactoe",
+                url="https://example.com"
+            ),
+        ]
+        update.inline_query.answer(results)
+
+    def game(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        game_short_name = query.game_short_name if query.game_short_name else None
+
+        if game_short_name:
+            query.answer(url="https://n3s7or.github.io/tictactoe-react/")
+            return
+
+        query.answer()
